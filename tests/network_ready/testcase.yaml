@@ -1,0 +1,17 @@
+sample:
+  description: Monitor network interface events
+  name: LCZ NM
+common:
+    tags: lcz_network_monitor
+    platform_allow: pinnacle_100_dvk mg100 bl5340_dvk_cpuapp
+    harness: console
+    harness_config:
+      type: multi_line
+      regex:
+        - "Network interface is ready!"
+tests:
+  lcz.network_monitor.network_ready:
+    tags: lcz_network_monitor
+  lcz.network_monitor.network_ready.dns:
+    extra_args: OVERLAY_CONFIG=prj.dns_overlay.conf
+    tags: lcz_network_monitor
