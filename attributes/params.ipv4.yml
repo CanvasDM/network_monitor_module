@@ -1,0 +1,19 @@
+---
+info:
+  title: network_monitor_ipv4_attributes
+attributes:
+  - name: ipv4_addr
+    summary: "Internet Protocol Version 4 address"
+    required: true
+    schema:
+      maxLength: 15
+      type: string
+    x-ctype: string
+    x-broadcast: true
+    x-default: ""
+    x-example: "xxx.xxx.xxx.xxx"
+    x-lockable: false
+    x-prepare: false
+    x-readable: true
+    x-savable: false
+    x-writable: false

@@ -1,0 +1,19 @@
+---
+info:
+  title: network_monitor_ipv6_attributes
+attributes:
+  - name: ipv6_addr
+    summary: "Internet Protocol Version 6 address"
+    required: true
+    schema:
+      maxLength: 39
+      type: string
+    x-ctype: string
+    x-broadcast: true
+    x-default: ""
+    x-example: "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx"
+    x-lockable: false
+    x-prepare: false
+    x-readable: true
+    x-savable: false
+    x-writable: false

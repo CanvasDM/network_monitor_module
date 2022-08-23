@@ -19,6 +19,10 @@ LOG_MODULE_REGISTER(lcz_network_monitor, CONFIG_LCZ_NETWORK_MONITOR_LOG_LEVEL);
 #include <net/net_mgmt.h>
 #include <net/dns_resolve.h>
 
+#if defined(CONFIG_ATTR)
+#include "attr.h"
+#endif
+
 #include "lcz_network_monitor.h"
 
 /**************************************************************************************************/
@@ -48,6 +52,11 @@ static void iface_dhcp_bound_evt_handler(struct net_mgmt_event_callback *cb, uin
 					 struct net_if *iface);
 #endif
 static void setup_iface_events(void);
+
+#if defined(CONFIG_ATTR)
+static void update_ip_address_strings(void);
+static void clear_ip_address_strings(void);
+#endif
 
 /**************************************************************************************************/
 /* Local Data Definitions                                                                         */
@@ -94,6 +103,10 @@ static void iface_dns_added_evt_handler(struct net_mgmt_event_callback *cb, uint
 	}
 
 	event_handler(LCZ_NM_EVENT_IFACE_DNS_ADDED);
+
+#if defined(CONFIG_ATTR)
+	update_ip_address_strings();
+#endif
 }
 
 static void iface_up_evt_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
@@ -104,6 +117,10 @@ static void iface_up_evt_handler(struct net_mgmt_event_callback *cb, uint32_t mg
 	}
 
 	event_handler(LCZ_NM_EVENT_IFACE_UP);
+
+#if defined(CONFIG_ATTR)
+	update_ip_address_strings();
+#endif
 }
 
 static void iface_down_evt_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
@@ -114,6 +131,10 @@ static void iface_down_evt_handler(struct net_mgmt_event_callback *cb, uint32_t 
 	}
 
 	event_handler(LCZ_NM_EVENT_IFACE_DOWN);
+
+#if defined(CONFIG_ATTR)
+	clear_ip_address_strings();
+#endif
 }
 
 #if defined(CONFIG_NET_DHCPV4)
@@ -139,6 +160,70 @@ static void setup_iface_events(void)
 		net_mgmt_add_event_callback(&iface_events[i].cb);
 	}
 }
+
+#if defined(CONFIG_ATTR)
+static void update_string(sa_family_t family, void *net_addr, uint16_t id, const char *msg)
+{
+	char *addr_status;
+	char addr[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx")];
+
+	memset(addr, 0, sizeof(addr));
+	addr_status = net_addr_ntop(family, net_addr, addr, sizeof(addr));
+	if (addr_status == NULL) {
+		LOG_ERR("Error converting %s address string", msg);
+	} else {
+		attr_set_string(id, addr, strlen(addr));
+	}
+}
+
+static void update_ip_address_strings(void)
+{
+	bool ready = true;
+	void *net_addr;
+
+	if (iface == NULL || cfg == NULL || !net_if_is_up(iface)) {
+		ready = false;
+	}
+
+#if defined(CONFIG_NET_IPV6)
+	net_addr = &cfg->ip.ipv6->unicast->address.in6_addr;
+	if (ready && !net_ipv6_is_addr_unspecified(net_addr)) {
+		update_string(AF_INET6, net_addr, ATTR_ID_ipv6_addr, "IPV6");
+	}
+#endif
+
+#if defined(CONFIG_NET_IPV4)
+	net_addr = &cfg->ip.ipv4->unicast->address.in_addr;
+	if (ready && !net_ipv4_is_addr_unspecified(net_addr)) {
+		update_string(AF_INET, net_addr, ATTR_ID_ipv4_addr, "IPV4");
+	}
+#endif
+
+#if defined(ATTR_ID_gw_ipv4_addr)
+	net_addr = &cfg->ip.ipv4->gw;
+	if (ready && !net_ipv4_is_addr_unspecified(net_addr)) {
+		update_string(AF_INET, net_addr, ATTR_ID_gw_ipv4_addr, "Gateway");
+	}
+#endif
+}
+
+static void clear_ip_address_strings(void)
+{
+	char addr[] = "";
+
+#if defined(CONFIG_NET_IPV6)
+	attr_set_string(ATTR_ID_ipv6_addr, addr, strlen(addr));
+#endif
+
+#if defined(CONFIG_NET_IPV4)
+	attr_set_string(ATTR_ID_ipv4_addr, addr, strlen(addr));
+#endif
+
+#if defined(ATTR_ID_gw_ipv4_addr)
+	attr_set_string(ATTR_ID_gw_ipv4_addr, addr, strlen(addr));
+#endif
+}
+#endif /* CONFIG_ATTR */
 
 /**************************************************************************************************/
 /* Global Function Definitions                                                                    */
@@ -178,7 +263,7 @@ bool lcz_nm_network_ready(void)
 		 !net_ipv4_is_addr_unspecified(&cfg->ip.ipv4->unicast->address.in_addr) &&
 		 !net_ipv4_is_addr_unspecified(&dnsAddr->sin_addr);
 #endif
-#else
+#else /* !DNS_RESOLVER */
 #if defined(CONFIG_NET_IPV6)
 	ready = net_if_is_up(iface) && cfg->ip.ipv6 &&
 		!net_ipv6_is_addr_unspecified(&cfg->ip.ipv6->unicast->address.in6_addr);
@@ -187,7 +272,7 @@ bool lcz_nm_network_ready(void)
 	ready |= net_if_is_up(iface) && cfg->ip.ipv4 &&
 		 !net_ipv4_is_addr_unspecified(&cfg->ip.ipv4->unicast->address.in_addr);
 #endif
-#endif
+#endif /* DNS_RESOLVER */
 
 exit:
 	return ready;
