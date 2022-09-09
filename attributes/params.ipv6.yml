@@ -12,7 +12,6 @@ attributes:
     x-broadcast: true
     x-default: ""
     x-example: "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx"
-    x-lockable: false
     x-prepare: false
     x-readable: true
     x-savable: false

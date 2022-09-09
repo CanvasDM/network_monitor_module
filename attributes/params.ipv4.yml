@@ -12,7 +12,6 @@ attributes:
     x-broadcast: true
     x-default: ""
     x-example: "xxx.xxx.xxx.xxx"
-    x-lockable: false
     x-prepare: false
     x-readable: true
     x-savable: false
