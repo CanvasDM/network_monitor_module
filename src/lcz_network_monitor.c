@@ -146,6 +146,10 @@ static void iface_dhcp_bound_evt_handler(struct net_mgmt_event_callback *cb, uin
 	}
 
 	event_handler(LCZ_NM_EVENT_IFACE_DHCP_DONE);
+
+#if defined(CONFIG_ATTR)
+	update_ip_address_strings();
+#endif
 }
 #endif
 
@@ -166,42 +170,45 @@ static void update_string(sa_family_t family, void *net_addr, uint16_t id, const
 {
 	char *addr_status;
 	char addr[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx")];
+	int r = 0;
 
 	memset(addr, 0, sizeof(addr));
 	addr_status = net_addr_ntop(family, net_addr, addr, sizeof(addr));
 	if (addr_status == NULL) {
 		LOG_ERR("Error converting %s address string", msg);
 	} else {
-		attr_set_string(id, addr, strlen(addr));
+		r = attr_set_string(id, addr, strlen(addr));
+		if (r < 0) {
+			LOG_ERR("Update address string error: %d", r);
+		}
 	}
 }
 
 static void update_ip_address_strings(void)
 {
-	bool ready = true;
 	void *net_addr;
 
 	if (iface == NULL || cfg == NULL || !net_if_is_up(iface)) {
-		ready = false;
+		return;
 	}
 
 #if defined(CONFIG_NET_IPV6)
 	net_addr = &cfg->ip.ipv6->unicast->address.in6_addr;
-	if (ready && !net_ipv6_is_addr_unspecified(net_addr)) {
+	if (!net_ipv6_is_addr_unspecified(net_addr)) {
 		update_string(AF_INET6, net_addr, ATTR_ID_ipv6_addr, "IPV6");
 	}
 #endif
 
 #if defined(CONFIG_NET_IPV4)
 	net_addr = &cfg->ip.ipv4->unicast->address.in_addr;
-	if (ready && !net_ipv4_is_addr_unspecified(net_addr)) {
+	if (!net_ipv4_is_addr_unspecified(net_addr)) {
 		update_string(AF_INET, net_addr, ATTR_ID_ipv4_addr, "IPV4");
 	}
 #endif
 
 #if defined(ATTR_ID_gw_ipv4_addr)
 	net_addr = &cfg->ip.ipv4->gw;
-	if (ready && !net_ipv4_is_addr_unspecified(net_addr)) {
+	if (!net_ipv4_is_addr_unspecified(net_addr)) {
 		update_string(AF_INET, net_addr, ATTR_ID_gw_ipv4_addr, "Gateway");
 	}
 #endif
