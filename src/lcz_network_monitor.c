@@ -6,21 +6,21 @@
  * SPDX-License-Identifier: LicenseRef-LairdConnectivity-Clause
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(lcz_network_monitor, CONFIG_LCZ_NETWORK_MONITOR_LOG_LEVEL);
 
 /**************************************************************************************************/
 /* Includes                                                                                       */
 /**************************************************************************************************/
-#include <zephyr.h>
-#include <init.h>
-#include <net/net_core.h>
-#include <net/net_context.h>
-#include <net/net_mgmt.h>
-#include <net/dns_resolve.h>
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
+#include <zephyr/net/net_core.h>
+#include <zephyr/net/net_context.h>
+#include <zephyr/net/net_mgmt.h>
+#include <zephyr/net/dns_resolve.h>
 
 #if defined(CONFIG_ATTR)
-#include "attr.h"
+#include <attr.h>
 #endif
 
 #include "lcz_network_monitor.h"
@@ -38,7 +38,7 @@ struct mgmt_events {
 /**************************************************************************************************/
 /* Local Function Prototypes                                                                      */
 /**************************************************************************************************/
-static int lcz_network_monitor_init(const struct device *device);
+static int lcz_network_monitor_init(void);
 static void event_handler(enum lcz_nm_event event);
 
 static void iface_dns_added_evt_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
@@ -254,10 +254,6 @@ bool lcz_nm_network_ready(void)
 	}
 
 #if defined(CONFIG_DNS_RESOLVER)
-	if (&dns->servers[0] == NULL) {
-		goto exit;
-	}
-
 #if defined(CONFIG_NET_IPV6)
 	dnsAddr6 = net_sin6(&dns->servers[0].dns_server);
 	ready = net_if_is_up(iface) && cfg->ip.ipv6 &&
@@ -295,9 +291,8 @@ void lcz_nm_register_event_callback(struct lcz_nm_event_agent *agent)
 /**************************************************************************************************/
 /* SYS INIT                                                                                       */
 /**************************************************************************************************/
-static int lcz_network_monitor_init(const struct device *device)
+static int lcz_network_monitor_init(void)
 {
-	ARG_UNUSED(device);
 	int ret;
 
 	ret = 0;
